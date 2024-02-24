@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './Button/Button';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Loader } from './Loader/Loader';
@@ -7,36 +7,43 @@ import { getAPI } from 'pixabay-api';
 import toast, { Toaster } from 'react-hot-toast';
 import css from './App.module.css';
 
-export class App extends Component {
-  state = {
-    search: '',
-    page: 1,
-    images: [],
-    isLoading: false,
-    isError: false,
-    isEnd: false,
-  };
+// export class App extends Component {
+//   state = {
+//     search: '',
+//     page: 1,
+//     images: [],
+//     isLoading: false,
+//     isError: false,
+//     isEnd: false,
+//   };
+
+export const App = () => {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImage] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [isEnd, setIsEnd] = useState(false);
+
+  useEffect(() => {
+    if (search === '') return;
+
+    (async () => {
+      await fetchImages(search, page);
+    })();
+  }, [search, page]);
 
   /////////////////////////////////////////////////////////
 
-  componentDidUpdate = async (_prevProps, prevState) => {
-    const { search, page } = this.state;
-
-    if (prevState.search !== search || prevState.page !== page) {
-      await this.fetchImages(search, page);
-    }
-  };
-
-  //////////////////////////////////////////////////////////
-
-  fetchImages = async (search, page) => {
+  const fetchImages = async (search, page) => {
     try {
-      this.setState({ isLoading: true });
+      setIsLoading(true);
 
       // fetch data from API
       const fetchedImages = await getAPI(search, page);
       const { hits, totalHits } = fetchedImages;
 
+      console.log(hits, totalHits);
       // Display an error message, if there is no match with the search
       if (hits.length === 0) {
         toast.error(
@@ -52,56 +59,47 @@ export class App extends Component {
 
       // Display a message if page is already at the end of data (12 = per_page based on API call)
       if (page * 12 >= totalHits) {
-        this.setState({ isEnd: true });
+        setIsEnd(true);
         toast("We're sorry, but you've reached the end of search results.");
       }
 
       // Update the state with the new images
-      this.setState(prevState => ({
-        images: [...prevState.images, ...hits],
-      }));
+      setImages(prevState => [...prevState, ...hits]);
     } catch {
-      this.setState({ isError: true });
+      setIsError(true);
     } finally {
-      this.setState({ isLoading: false });
+      setIsLoading(false);
     }
   };
 
-  /////////////////////////////////////////////////////
-
-  handleSubmit = e => {
+  const handleSubmit = e => {
     e.preventDefault();
 
-    const { search } = this.state;
     const newSearch = e.target.search.value.trim().toLowerCase();
 
     if (newSearch !== search) {
-      this.setState({ search: newSearch, page: 1, images: [] });
+      setSearch(newSearch);
+      setPage(1);
+      setImages([]);
     }
   };
 
-  handleClick = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleClick = () => {
+    setPage(prevState => prevState + 1);
   };
 
-  /////////////////////////////////////////////////////////
+  console.log(search);
+  return (
+    <div className={css.app}>
+      <Searchbar onSubmit={handleSubmit} />
+      {/* Render ImageGallery Component when there is atleast one match of images */}
+      {images.length >= 1 && <ImageGallery photos={images} />}
 
-  render() {
-    const { images, isLoading, isError, isEnd } = this.state;
-
-    return (
-      <div className={css.app}>
-        <Searchbar onSubmit={this.handleSubmit} />
-        {/* Render ImageGallery Component when there is atleast one match of images */}
-        {images.length >= 1 && <ImageGallery photos={images} />}
-
-        {/* Render Button Component when there is atleast a second page or more and it's not the end of page */}
-        {images.length >= 2 && !isEnd && <Button onClick={this.handleClick} />}
-        {isLoading && <Loader />}
-        {isError &&
-          toast.error('Oops, something went wrong! Reload this page!')}
-        <Toaster position="top-right" reverseOrder={false} />
-      </div>
-    );
-  }
-}
+      {/* Render Button Component when there is atleast a second page or more and it's not the end of page */}
+      {images.length >= 2 && !isEnd && <Button onClick={handleClick} />}
+      {isLoading && <Loader />}
+      {isError && toast.error('Oops, something went wrong! Reload this page!')}
+      <Toaster position="top-center" reverseOrder={false} />
+    </div>
+  );
+};
