@@ -20,7 +20,7 @@ import css from './App.module.css';
 export const App = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [images, setImage] = useState([]);
+  const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [isEnd, setIsEnd] = useState(false);
